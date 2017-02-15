@@ -1,12 +1,10 @@
-syncing blocks and syncing transactions should be different transactions.
 
 
-channel_test.sh needs work.
-It needs to make a bet.
+syncing blocks and syncing transactions should be different. We should be able to do one without the other.
+
 
 We should use a CLI program to talk to the node instead of using erlang directly.
-
-Users should be able to delegate the power of channel_slash to others. That way, if they are offline, their funds still wont be stolen. (Idea comes from Raiden)
+It should be able to access everything in /src/networking/internal_handler.erl
 
 We need to update download_blocks so that peers get ranked, and we spend more time talking to higher-ranked peers.
 There is a problem where if you crash while syncing with a peer, then you skip trying to sync with any peer lower on the list. this is very bad.
@@ -15,18 +13,11 @@ block:check2 needs an update. It should only accept blocks that were made after 
 
 make the api networking/handler be entirely encrypted. This is to protect information about the channels. https://github.com/BumblebeeBat/pink_crypto/blob/master/src/encryption.erl
 
-
-we need a channel powered satoshi dice for gambling. look at channel_test.sh
-
-we need to re-write the channel manager stuff for the new channels.
-
 download_blocks could be more efficient.
-
 
 maybe nodes need to advertise their own IP/port combo as a peer?
 
-
-
+It would be nice if there were some macros for chalang/src/compiler_lisp2.erl that did backtracking. that way we wouldn't have to think about control flow when making smart contracts.
 
 
 
@@ -48,3 +39,4 @@ Mining should be on headers, not on blocks.
 We need to reward the miner with the transaction fees, to incentivize him to include them. block:absorb_txs
 
 making a channel should require both parties to sign, that way attackers can't trick servers into dropping their channel state.
+

@@ -41,13 +41,18 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     io:fwrite(packer:pack(SS)),
     io:fwrite("\n"),
     {Amount, NewCNonce} = spk:run(fast, SS, ScriptPubkey, NewHeight, 0, Accounts, Channels),
-
+    SR = spk:slash_reward(ScriptPubkey),
+    case From of %channels can only delete money that was inside the channel.
+	%only the other person can slash, so only check that we can afford to pay it.
+	Acc1 -> true = (-1 < (channel:bal1(Channel)-SR-Amount));
+	Acc2 -> true = (-1 < (channel:bal2(Channel)-SR+Amount));
+	_ -> Acc1 = Acc2
+    end,
     true = NewCNonce > channel:nonce(Channel),
     NewChannel = channel:update(CID, Channels, NewCNonce, 0, -(Amount), Amount, Mode, spk:delay(ScriptPubkey), NewHeight),
     NewChannels = channel:write(NewChannel, Channels),
     Facc = account:update(From, Accounts, -Tx#csc.fee, Tx#csc.nonce, NewHeight),
     NewAccounts = account:write(Accounts, Facc),
-    %<<TheirSecret/binary, _>> = SS,
     spawn(fun() -> check_slash(From, Acc1, Acc2, SS, SPK, NewAccounts, NewChannels, NewCNonce) end), %If our channel is closing somewhere we don't like, then we need to use a channel_slash transaction to stop them and save our money.
     {NewChannels, NewAccounts}.
 

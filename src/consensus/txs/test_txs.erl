@@ -180,7 +180,7 @@ test(5) ->
     Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
     ChannelNonce = 0,
-    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy), Accounts3),
+    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
     SignedScriptPubKey = testnet_sign:sign_tx(ScriptPubKey, NewPub, NewPriv, ID2, Accounts3), 
     ScriptSig = compiler_chalang:doit(<<" int 1 ">>),
     {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 
@@ -225,7 +225,7 @@ test(6) ->
     Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
     ChannelNonce = 0,
-    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy), Accounts3),
+    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
     SignedScriptPubKey = testnet_sign:sign_tx(ScriptPubKey, NewPub, NewPriv, ID2, Accounts3), 
     ScriptSig = compiler_chalang:doit(<<" int 1 ">>),
     {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 

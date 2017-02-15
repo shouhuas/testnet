@@ -21,7 +21,7 @@ make(From, Fee, ScriptPubkey, ScriptSig, Accounts,Channels) ->
     {Tx, [Proof1, Proof2, Proofc]}.
 
 doit(Tx, Channels, Accounts, NewHeight) ->
-    From = Tx#cs.from,
+    %From = Tx#cs.from,
     %CID = Tx#cs.cid,
     SignedSPK = Tx#cs.scriptpubkey,
     SPK = testnet_sign:data(SignedSPK),
@@ -35,22 +35,26 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     Acc2 = spk:acc2(SPK),
     true = channel:entropy(Channel) == spk:entropy(SPK),
     Mode = channel:mode(Channel),
+    SR = spk:slash_reward(SPK),
     Fee = Tx#cs.fee,
     Nonce = Tx#cs.nonce,
-    {Mode, Acc1Fee, Acc2Fee, N1, N2}
-	= case From of
-	      Acc1 -> {2, Fee, 0, Nonce, none};
-	      Acc2 -> {1, 0, Fee, none, Nonce};
-	      _ -> Acc1
-	  end,
+    {ID, Acc1Fee, Acc2Fee} = 
+	case Mode of
+	    2 -> {Acc1, SR, 0};
+	    1 -> {Acc2, 0, SR};
+	    _ -> Acc1 = Acc2
+	end,
     {Amount, NewCNonce} = spk:run(fast, Tx#cs.scriptsig, SPK, NewHeight, 1, Accounts, Channels),
     true = NewCNonce > channel:nonce(Channel),
     %delete the channel. empty the channel into the accounts.
     NewChannels = channel:delete(CID, Channels),
-    Account1 = account:update(Acc1, Accounts, channel:bal1(Channel)-Acc1Fee-Amount, N1, NewHeight),
-    Account2 = account:update(Acc2, Accounts, channel:bal2(Channel)-Acc2Fee+Amount, N2, NewHeight),
+    true = (-1 < (channel:bal1(Channel)-Acc1Fee-Amount)),%channels can only delete money that was inside the channel.
+    true = (-1 < (channel:bal2(Channel)-Acc2Fee+Amount)),
+    Account1 = account:update(Acc1, Accounts, channel:bal1(Channel)-Acc1Fee-Amount, none, NewHeight),
+    Account2 = account:update(Acc2, Accounts, channel:bal2(Channel)-Acc2Fee+Amount, none, NewHeight),
+    Account3 = account:update(ID, Accounts, SR-Fee, Nonce, NewHeight),
     Accounts2 = account:write(Accounts, Account1),
-    NewAccounts = account:write(Accounts2, Account2),
-    
+    Accounts3 = account:write(Accounts2, Account3),
+    NewAccounts = account:write(Accounts3, Account2), 
    {NewChannels, NewAccounts}. 
 		      
