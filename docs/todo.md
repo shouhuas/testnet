@@ -12,8 +12,6 @@ We should add everything from easy to internal_handler.erl
 We need to update download_blocks so that peers get ranked, and we spend more time talking to higher-ranked peers.
 There is a problem where if you crash while syncing with a peer, then you skip trying to sync with any peer lower on the list. this is very bad.
 
-block:check2 needs an update. It should only accept blocks that were made after the median of the last 100 blocks
-
 make the api networking/handler be entirely encrypted. This is to protect information about the channels. https://github.com/BumblebeeBat/pink_crypto/blob/master/src/encryption.erl
 
 download_blocks could be more efficient.
@@ -26,8 +24,6 @@ It would be nice if there were some macros for chalang/src/compiler_lisp2.erl th
 
 
 Updates for next time we restart at a genesis block:
-
-Newly mined coins should not be spendable until they mature. Bitcoin waits 100 blocks for maturity.
 
 proof of existence transaction type.
 

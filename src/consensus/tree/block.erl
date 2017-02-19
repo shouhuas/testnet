@@ -4,7 +4,8 @@
 	 accounts_hash/1,channels_hash/1,
 	 read/1,binary_to_file/1,block/1,prev_hash/2,
 	 prev_hash/1,read_int/1,check1/1,pow_block/1,
-	 mine_blocks/2, hashes/1]).
+	 mine_blocks/2, hashes/1,
+	 median_last/2]).
 
 -record(block, {height, prev_hash = 0, txs, channels, 
 		accounts, mines_block, time, 
@@ -90,16 +91,19 @@ genesis() ->
     
 absorb_txs(PrevPlus, MinesBlock, Height, Txs) ->
     OldAccounts = PrevPlus#block_plus.accounts,
-    NewMiner = 
+    NewAccounts = 
 	case MinesBlock of
+	    -1 ->
+		OldAccounts;
 	    {ID, Address} -> %for miners who don't yet have an account.
 		{_, empty, _} = account:get(ID, OldAccounts),
 		%We should also give the miner the sum of the transaction fees.
-		account:new(ID, Address, constants:block_reward(), Height);
+		NM = account:new(ID, Address, constants:block_reward(), Height),
+		account:write(OldAccounts, NM);
 	    MB -> %If you already have an account.
-		account:update(MB, OldAccounts, constants:block_reward(), none, Height)
+		NM = account:update(MB, OldAccounts, constants:block_reward(), none, Height),
+		account:write(OldAccounts, NM)
 	end,
-    NewAccounts = account:write(OldAccounts, NewMiner),
     txs:digest(Txs, 
 	       PrevPlus#block_plus.channels,
 	       NewAccounts,
@@ -109,7 +113,8 @@ make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this bloc
     ParentPlus = read(PrevHash),
     Parent = pow:data(ParentPlus#block_plus.block),
     Height = Parent#block.height + 1,
-    {NewChannels, NewAccounts} = absorb_txs(ParentPlus, ID, Height, Txs),
+    MB = mine_block_ago(Height - constants:block_creation_maturity()),
+    {NewChannels, NewAccounts} = absorb_txs(ParentPlus, MB, Height, Txs),
     CHash = channel:root_hash(NewChannels),
     AHash = account:root_hash(NewAccounts),
     NextDifficulty = next_difficulty(ParentPlus),
@@ -204,22 +209,31 @@ check2(PowBlock) ->
     %check that the time is later than the median of the last 100 blocks.
 
     %check2 assumes that the parent is in the database already.
+    io:fwrite("made it to check 2"),
     Block = block(PowBlock),
     true = is_binary(Block#block.comment),
     true = size(Block#block.comment) < constants:comment_limit(),
     true = Block#block.magic == constants:magic(),
-    true = Block#block.time > median_last(Block, 100),
     Difficulty = Block#block.difficulty,
     PH = Block#block.prev_hash,
     ParentPlus = read(PH),
-    true = is_record(ParentPlus, block_plus),
     Difficulty = next_difficulty(ParentPlus),
-    PrevPlus = read(PH),
-    Prev = block(PrevPlus),
-    MB = Block#block.mines_block,
-    true = (Block#block.height-1) == Prev#block.height,
+    true = is_record(ParentPlus, block_plus),
+    Prev = block(ParentPlus),
+    io:fwrite("before median check\n"),
+    ML = median_last(PH, constants:block_time_after_median()),
+    io:fwrite("ML is "),
+    io:fwrite(integer_to_list(ML)),
+    io:fwrite("\n"),
+    true = Block#block.time > ML,
+    io:fwrite("after median check\n"),
+    Height = Block#block.height,
+    MB = mine_block_ago(Height - constants:block_creation_maturity()),
+    true = (Height-1) == Prev#block.height,
     {CH, AH} = {Block#block.channels, Block#block.accounts},
-    {CR, AR} = absorb_txs(PrevPlus, MB, Block#block.height, Block#block.txs),
+    io:fwrite("before absorb txs\n"),
+    {CR, AR} = absorb_txs(ParentPlus, MB, Height, Block#block.txs),
+    io:fwrite("after absorb txs\n"),
     CH = channel:root_hash(CR),
     AH = account:root_hash(AR),
     MyAddress = keys:address(),
@@ -229,10 +243,18 @@ check2(PowBlock) ->
 	    %because of hash_check, this function is only run once per block. 
 	_ -> ok
     end,
-    #block_plus{block = PowBlock, channels = CR, accounts = AR, accumulative_difficulty = next_acc(PrevPlus, Block#block.difficulty), prev_hashes = prev_hashes(hash(Prev))}.
+    io:fwrite("finishing absorb\n"),
+    #block_plus{block = PowBlock, channels = CR, accounts = AR, accumulative_difficulty = next_acc(ParentPlus, Block#block.difficulty), prev_hashes = prev_hashes(hash(Prev))}.
+mine_block_ago(Height) when Height < 1 ->
+    -1;
+mine_block_ago(Height) ->
+    BP = block:read_int(Height),
+    Block = pow:data(BP#block_plus.block),
+    Block#block.mines_block.
 
 median_last(BH, N) ->
     median(block_times(BH, N)).
+block_times(_, 0) -> [];
 block_times(0, N) ->
     list_many(N, 0);
 block_times(H, N) ->
