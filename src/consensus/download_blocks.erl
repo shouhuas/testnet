@@ -24,6 +24,10 @@ sync_all([{IP, Port}|T], Height) ->
     %spawn(download_blocks, sync, [IP, Port, Height]),
     %timer:sleep(3000),
     sync_all(T, Height).
+sync_txs([]) -> success;
+sync_txs([{IP, Port}|T]) -> 
+    get_txs(IP, Port),
+    sync_txs(T).
 sync(IP, Port, MyHeight) ->
     %lower their ranking
     %peers:update_score(IP, Port, peers:initial_score()),
@@ -37,8 +41,8 @@ sync(IP, Port, MyHeight) ->
 		    {ok, Block} = talker:talk({block, HH}, IP, Port),
 		    trade_blocks(IP, Port, [Block], HH);
 		true ->
-		    trade_blocks(IP, Port, [TopBlock], Height),
-		    get_txs(IP, Port)
+		    trade_blocks(IP, Port, [TopBlock], Height)%,
+		    %get_txs(IP, Port)
 		    
 	    end,
 	    trade_peers(IP, Port),

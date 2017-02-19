@@ -1,10 +1,13 @@
-
-
-syncing blocks and syncing transactions should be different. We should be able to do one without the other.
+the new way of doing channel slash has a different problem.
+We need the channel to finish at the highest nonce possible. The third party could be bribed to choose a different final state.
+We need some way to do the channel_slash transaction again and again, until a higher nonce cannot be found.
+Each slasher puts up a deposit, and takes the deposit of the previous.
+If the same channel_slash exists for a long enough time period, then anyone can do a channel_timeout transaction, to close the channel.
 
 
 We should use a CLI program to talk to the node instead of using erlang directly.
 It should be able to access everything in /src/networking/internal_handler.erl
+We should add everything from easy to internal_handler.erl
 
 We need to update download_blocks so that peers get ranked, and we spend more time talking to higher-ranked peers.
 There is a problem where if you crash while syncing with a peer, then you skip trying to sync with any peer lower on the list. this is very bad.

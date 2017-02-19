@@ -204,17 +204,14 @@ check2(PowBlock) ->
     %check that the time is later than the median of the last 100 blocks.
 
     %check2 assumes that the parent is in the database already.
-    %add comment to blocks.
     Block = block(PowBlock),
     true = is_binary(Block#block.comment),
     true = size(Block#block.comment) < constants:comment_limit(),
     true = Block#block.magic == constants:magic(),
+    true = Block#block.time > median_last(Block, 100),
     Difficulty = Block#block.difficulty,
     PH = Block#block.prev_hash,
     ParentPlus = read(PH),
-    %io:fwrite("parent plus is "),
-    %io:fwrite(packer:pack(ParentPlus)),
-    %io:fwrite("\n"),
     true = is_record(ParentPlus, block_plus),
     Difficulty = next_difficulty(ParentPlus),
     PrevPlus = read(PH),
@@ -233,6 +230,19 @@ check2(PowBlock) ->
 	_ -> ok
     end,
     #block_plus{block = PowBlock, channels = CR, accounts = AR, accumulative_difficulty = next_acc(PrevPlus, Block#block.difficulty), prev_hashes = prev_hashes(hash(Prev))}.
+
+median_last(BH, N) ->
+    median(block_times(BH, N)).
+block_times(0, N) ->
+    list_many(N, 0);
+block_times(H, N) ->
+    BP = block:read(H),
+    Block = pow:data(BP#block_plus.block),
+    BH2 = Block#block.prev_hash,
+    T = Block#block.time,
+    [T|block_times(BH2, N-1)].
+list_many(0, _) -> [];
+list_many(N, X) -> [X|list_many(N-1, X)].
 
 binary_to_file(B) ->
     C = base58:binary_to_base58(B),
